@@ -79,7 +79,7 @@ def run_evaluation(
         records=records,
         metrics=metrics,
         config_snapshot={
-            "provider": "groq",
+            "provider": "google_gemini",
             "model": config.model,
             "max_workers": config.max_workers,
             "dataset": str(config.dataset_path),

@@ -26,10 +26,10 @@ class EvalConfig:
     ) -> EvalConfig:
         load_dotenv()
 
-        api_key = os.getenv("GROQ_API_KEY", "").strip()
+        api_key = os.getenv("GEMINI_API_KEY", "").strip()
         if not api_key:
             raise ValueError(
-                "GROQ_API_KEY is not set. Copy .env.example to .env and add your Groq API key."
+                "GEMINI_API_KEY is not set. Copy .env.example to .env and add your Gemini API key."
             )
 
         max_examples_raw = os.getenv("MAX_EXAMPLES", "").strip()
@@ -42,7 +42,7 @@ class EvalConfig:
         return cls(
             dataset_path=dataset_path or Path("data/dataset.csv"),
             results_dir=results_dir or Path("results"),
-            model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip(),
+            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip(),
             max_workers=max(1, int(os.getenv("MAX_WORKERS", "3"))),
             max_examples=max_examples,
             api_max_retries=max(1, int(os.getenv("API_MAX_RETRIES", "3"))),
