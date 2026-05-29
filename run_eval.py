@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
         "--workers",
         type=int,
         default=None,
-        help="Parallel API workers (default: MAX_WORKERS from .env, or 3)",
+        help="Parallel API workers (default: MAX_WORKERS from .env, or 1)",
     )
     parser.add_argument(
         "--limit",
@@ -63,6 +63,7 @@ def main() -> int:
         max_workers=workers,
         max_examples=max_examples,
         api_max_retries=config.api_max_retries,
+        request_interval_sec=config.request_interval_sec,
     )
 
     try:

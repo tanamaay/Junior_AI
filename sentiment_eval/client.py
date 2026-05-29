@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import os
 
-from google import genai
+from openai import OpenAI
+
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 
-def create_llm_client() -> genai.Client:
-    """Google Gemini API client."""
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+def create_llm_client() -> OpenAI:
+    """OpenAI-compatible client for Groq."""
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
         raise ValueError(
-            "GEMINI_API_KEY is not set. Copy .env.example to .env and add your Gemini API key."
+            "GROQ_API_KEY is not set. Copy .env.example to .env and add your Groq API key."
         )
-    return genai.Client(api_key=api_key)
+    return OpenAI(api_key=api_key, base_url=GROQ_BASE_URL)

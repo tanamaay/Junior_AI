@@ -9,6 +9,7 @@ from sentiment_eval.client import create_llm_client
 from sentiment_eval.config import EvalConfig
 from sentiment_eval.dataset import Example
 from sentiment_eval.llm import build_classify_fn
+from sentiment_eval.rate_limit import RateLimiter
 from sentiment_eval.metrics import EvalMetrics, PredictionRecord, compute_metrics
 from sentiment_eval.results_io import create_run_dir, save_results
 
@@ -45,10 +46,12 @@ def run_evaluation(
     config: EvalConfig,
 ) -> tuple[list[PredictionRecord], EvalMetrics, Path]:
     client = create_llm_client()
+    rate_limiter = RateLimiter(config.request_interval_sec)
     classify = build_classify_fn(
         client=client,
         model=config.model,
         max_retries=config.api_max_retries,
+        rate_limiter=rate_limiter,
     )
 
     records: list[PredictionRecord] = []
@@ -79,9 +82,10 @@ def run_evaluation(
         records=records,
         metrics=metrics,
         config_snapshot={
-            "provider": "google_gemini",
+            "provider": "groq",
             "model": config.model,
             "max_workers": config.max_workers,
+            "request_interval_sec": config.request_interval_sec,
             "dataset": str(config.dataset_path),
             "num_examples": len(examples),
         },
@@ -93,6 +97,11 @@ def print_report(metrics: EvalMetrics, run_dir: Path) -> None:
     print("\n=== Evaluation summary ===")
     print(f"Accuracy: {metrics.accuracy:.1%} ({metrics.correct}/{metrics.total})")
     print(f"Unparseable LLM responses: {metrics.unparseable}")
+    if metrics.unparseable > metrics.total * 0.1:
+        print(
+            "\nWARNING: Many unparseable responses — often API rate limits or failures. "
+            "Try MAX_WORKERS=1 or lower parallel workers in .env"
+        )
 
     print("\nPer-class metrics:")
     for label, stats in metrics.per_class.items():

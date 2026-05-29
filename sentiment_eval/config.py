@@ -17,6 +17,7 @@ class EvalConfig:
     max_workers: int
     max_examples: int | None
     api_max_retries: int
+    request_interval_sec: float
 
     @classmethod
     def from_env(
@@ -26,10 +27,10 @@ class EvalConfig:
     ) -> EvalConfig:
         load_dotenv()
 
-        api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        api_key = os.getenv("GROQ_API_KEY", "").strip()
         if not api_key:
             raise ValueError(
-                "GEMINI_API_KEY is not set. Copy .env.example to .env and add your Gemini API key."
+                "GROQ_API_KEY is not set. Copy .env.example to .env and add your Groq API key."
             )
 
         max_examples_raw = os.getenv("MAX_EXAMPLES", "").strip()
@@ -39,11 +40,14 @@ class EvalConfig:
             if max_examples <= 0:
                 max_examples = None
 
+        interval_raw = os.getenv("API_REQUEST_INTERVAL_SEC", "0").strip()
+
         return cls(
             dataset_path=dataset_path or Path("data/dataset.csv"),
             results_dir=results_dir or Path("results"),
-            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip(),
+            model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip(),
             max_workers=max(1, int(os.getenv("MAX_WORKERS", "3"))),
             max_examples=max_examples,
-            api_max_retries=max(1, int(os.getenv("API_MAX_RETRIES", "3"))),
+            api_max_retries=max(1, int(os.getenv("API_MAX_RETRIES", "5"))),
+            request_interval_sec=float(interval_raw or "0"),
         )

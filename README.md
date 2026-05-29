@@ -5,7 +5,7 @@ Python evaluation harness for an LLM-based sentiment classifier on customer call
 ## What it does
 
 1. Loads a labeled CSV (`id`, `snippet`, `label`)
-2. Sends each snippet to an LLM via the [Google Gemini API](https://ai.google.dev/)
+2. Sends each snippet to an LLM via the [Groq API](https://groq.com/) (OpenAI-compatible)
 3. Normalizes the model output to `positive`, `neutral`, or `negative`
 4. Reports accuracy, per-class metrics, a confusion matrix, and failure breakdowns
 5. Saves predictions, misclassified rows, and a JSON summary under `results/`
@@ -26,7 +26,7 @@ pip install -r requirements.txt
 copy .env.example .env   # Windows — use `cp` on macOS/Linux
 ```
 
-Edit `.env` and set `GEMINI_API_KEY` ([Google AI Studio](https://aistudio.google.com/apikey)). Optional: `GEMINI_MODEL` (default `gemini-2.5-flash`), `MAX_WORKERS`, `MAX_EXAMPLES`.
+Edit `.env` and set `GROQ_API_KEY` ([Groq console](https://console.groq.com/)). Optional: `GROQ_MODEL` (default `llama-3.3-70b-versatile`), `MAX_WORKERS`, `MAX_EXAMPLES`.
 
 ## Dataset
 
@@ -126,7 +126,7 @@ inspect_dataset.py       # Dataset preview
 sentiment_eval/
   config.py              # Environment / settings
   dataset.py             # CSV loading and validation
-  client.py              # Google Gemini client
+  client.py              # Groq client (OpenAI-compatible)
   llm.py                 # Classifier + retries
   normalize.py           # Map free-form output → label
   metrics.py             # Accuracy, confusion matrix, breakdowns

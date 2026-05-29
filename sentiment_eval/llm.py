@@ -3,10 +3,10 @@ from __future__ import annotations
 import time
 from typing import Callable
 
-from google import genai
-from google.genai import types
+from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
 
 from sentiment_eval.normalize import normalize_label
+from sentiment_eval.rate_limit import RateLimiter, retry_delay_seconds
 
 SYSTEM_PROMPT = """You classify customer call transcript snippets by sentiment.
 
@@ -19,53 +19,44 @@ USER_PROMPT_TEMPLATE = """Classify the sentiment of this call snippet:
 """
 
 
-def _response_text(response) -> str:
-    """Extract model text; gemini-2.5 may use tokens on reasoning before output."""
-    text = response.text
-    if text:
-        return text.strip()
-    candidates = getattr(response, "candidates", None) or []
-    if not candidates:
-        return ""
-    content = getattr(candidates[0], "content", None)
-    parts = getattr(content, "parts", None) if content else None
-    if not parts:
-        return ""
-    return "".join(
-        part.text for part in parts if getattr(part, "text", None)
-    ).strip()
-
-
 def build_classify_fn(
     *,
-    client: genai.Client,
+    client: OpenAI,
     model: str,
     max_retries: int,
+    rate_limiter: RateLimiter | None = None,
 ) -> Callable[[str], tuple[str | None, str]]:
     """Return a function that classifies a snippet -> (normalized_label, raw_response)."""
 
     def classify(snippet: str) -> tuple[str | None, str]:
         last_error: Exception | None = None
-        prompt = USER_PROMPT_TEMPLATE.format(snippet=snippet)
 
         for attempt in range(max_retries):
             try:
-                response = client.models.generate_content(
+                if rate_limiter is not None:
+                    rate_limiter.wait()
+                response = client.chat.completions.create(
                     model=model,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_PROMPT,
-                        temperature=0,
-                        max_output_tokens=64,
-                    ),
+                    temperature=0,
+                    max_tokens=16,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {
+                            "role": "user",
+                            "content": USER_PROMPT_TEMPLATE.format(snippet=snippet),
+                        },
+                    ],
                 )
-                raw = _response_text(response)
+                raw = (response.choices[0].message.content or "").strip()
                 return normalize_label(raw), raw
-            except Exception as exc:
+            except (RateLimitError, APIConnectionError, APIStatusError) as exc:
                 last_error = exc
                 if attempt + 1 >= max_retries:
                     break
-                time.sleep(2**attempt)
+                time.sleep(retry_delay_seconds(exc, attempt))
+            except Exception as exc:
+                last_error = exc
+                break
 
         raise RuntimeError(f"LLM call failed after {max_retries} attempts: {last_error}")
 
